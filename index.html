@@ -101,17 +101,17 @@ fbq('track', 'PageView');
 
       <label for="color">Chọn màu/mẫu</label>
       <select id="color" name="color" required>
-        <option value="Nâu cài cúc">Nâu cài cúc</option>
-        <option value="Hồng cài cúc">Hồng cài cúc</option>
-        <option value="Choàng ghi">Choàng ghi</option>
-        <option value="Choàng vàng">Choàng vàng</option>
-        <option value="Choàng trắng sữa">Choàng trắng sữa</option>
-        <option value="Choàng nâu">Choàng nâu</option>
-        <option value="Choàng hồng">Choàng hồng</option>
-        <option value="Khủng long vàng">Khủng long vàng</option>
-        <option value="Tai gấu trắng sữa">Tai gấu trắng sữa</option>
-        <option value="Tai gấu nâu">Tai gấu nâu</option>
-        <option value="Khủng long xanh lá">Khủng long xanh lá</option>
+        <option value="A11 - Nâu cài cúc">A11 - Nâu cài cúc</option>
+        <option value="A10 - Hồng cài cúc">A10 - Hồng cài cúc</option>
+        <option value="A9 - Choàng ghi">A9 - Choàng ghi</option>
+        <option value="A8 - Choàng vàng">A8 - Choàng vàng</option>
+        <option value="A7 - Choàng trắng sữa">A7 - Choàng trắng sữa</option>
+        <option value="A6 - Choàng nâu">A6 - Choàng nâu</option>
+        <option value="A5 - Choàng hồng">A5 - Choàng hồng</option>
+        <option value="A3 - Khủng long vàng">A3 - Khủng long vàng</option>
+        <option value="A4 - Tai gấu trắng sữa">A4 - Tai gấu trắng sữa</option>
+        <option value="A2 - Tai gấu nâu">A2 - Tai gấu nâu</option>
+        <option value="A1 - Khủng long xanh lá">A1 - Khủng long xanh lá</option>
       </select>
 
       <label for="quantity">Số lượng</label>
@@ -124,7 +124,7 @@ fbq('track', 'PageView');
       <label for="note">Ghi chú thêm (không bắt buộc)</label>
       <textarea id="note" name="note" placeholder="VD: mua combo 2 áo nhưng muốn 2 màu khác nhau, ghi rõ ở đây..."></textarea>
 
-      <div class="price-box" id="priceBox">Tạm tính: 99.000đ</div>
+      <div class="price-box" id="priceBox">Tổng Tiền Thanh Toán: 99.000đ</div>
 
       <button type="submit" id="submitBtn">Đặt hàng ngay</button>
       <div class="note">Chúng tôi sẽ gọi điện xác nhận đơn hàng trong vòng 30 phút.</div>
@@ -161,7 +161,7 @@ function getSelectedPrice() {
 function updatePriceBox() {
   const price = getSelectedPrice();
   document.getElementById('priceBox').textContent =
-    'Tạm tính: ' + price.toLocaleString('vi-VN') + 'đ';
+    'Tổng Tiền Thanh Toán: ' + price.toLocaleString('vi-VN') + 'đ';
 }
 document.getElementById('quantity').addEventListener('change', updatePriceBox);
 updatePriceBox();
