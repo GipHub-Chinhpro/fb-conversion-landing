@@ -56,6 +56,12 @@ async function createPancakeOrder({ name, phone, address, product, size, color, 
 
   try {
     const itemName = [product, size, color].filter(Boolean).join(' - ');
+    // Pancake tự tính tổng tiền = retail_price x quantity, còn "price" ở đây là
+    // TỔNG giá combo (đã tính theo bảng giá combo, không phải giá từng áo).
+    // Nên phải quy đổi ngược ra đơn giá/áo để Pancake nhân lại ra đúng tổng tiền,
+    // tránh bị nhân đôi (VD combo 2 áo 158k mà gửi sai sẽ thành 316k).
+    const qty = Number(quantity) || 1;
+    const unitPrice = Math.round(price / qty);
     const body = {
       shop_id: Number(shopId),
       bill_full_name: name,
@@ -65,11 +71,11 @@ async function createPancakeOrder({ name, phone, address, product, size, color, 
       account_name: 'Landing page quảng cáo',
       items: [
         {
-          quantity: Number(quantity) || 1,
+          quantity: qty,
           one_time_product: true,
           variation_info: {
             name: itemName || 'Áo chống nắng chống tia UV cho bé',
-            retail_price: price,
+            retail_price: unitPrice,
             weight: 100
           }
         }
