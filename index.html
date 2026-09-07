@@ -87,6 +87,9 @@ fbq('track', 'PageView');
       <label for="phone">Số điện thoại</label>
       <input id="phone" name="phone" type="tel" required />
 
+      <label for="address">Địa chỉ nhận hàng (không bắt buộc)</label>
+      <input id="address" name="address" type="text" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" />
+
       <label for="size">Chọn size (theo cân nặng của bé)</label>
       <select id="size" name="size" required>
         <option value="Size 1 (4-7kg)">Size 1 — bé nặng 4-7kg</option>
@@ -175,6 +178,7 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
   const payload = {
     name: document.getElementById('name').value,
     phone: document.getElementById('phone').value,
+    address: document.getElementById('address').value,
     product: 'Áo chống nắng chống tia UV cho bé',
     size: document.getElementById('size').value,
     color: document.getElementById('color').value,
