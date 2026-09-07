@@ -57,13 +57,27 @@ fbq('track', 'PageView');
   button:disabled { opacity: 0.6; cursor: not-allowed; }
   .note { font-size: 13px; color: #777; margin-top: 10px; }
   #status { margin-top: 14px; font-weight: 600; }
+  .price-sub { font-size: 14px; color: #555; font-weight: 400; margin: -14px 0 20px; }
+  .price-box {
+    background: #fff3ec; border: 1px dashed #e0562f; border-radius: 10px;
+    padding: 10px 12px; font-size: 14px; color: #b8401f; font-weight: 700; margin-top: 6px;
+  }
+  textarea {
+    width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px;
+    font-size: 16px; font-family: inherit; resize: vertical; min-height: 60px;
+  }
 </style>
 </head>
 <body>
 
 <div class="hero">
-  <h1>Áo chống nắng cho bé - Bon Bon Shop</h1>
-  <div class="price">Giá ưu đãi hôm nay: 199.000đ</div>
+  <h1>Áo chống nắng chống tia UV cho bé - Bon Bon Shop</h1>
+  <div class="price">Chỉ từ 79.000đ/áo</div>
+  <div class="price-sub">
+    Mua lẻ 1 áo: 99.000đ (đã gồm 20k ship) &nbsp;|&nbsp;
+    Combo 2 áo: 158.000đ (miễn ship) &nbsp;|&nbsp;
+    Combo 3 áo: 225.000đ (miễn ship)
+  </div>
 
   <div class="form-box">
     <form id="leadForm">
@@ -73,11 +87,41 @@ fbq('track', 'PageView');
       <label for="phone">Số điện thoại</label>
       <input id="phone" name="phone" type="tel" required />
 
-      <label for="product">Sản phẩm</label>
-      <select id="product" name="product">
-        <option value="Áo chống nắng bé trai">Áo chống nắng bé trai</option>
-        <option value="Áo chống nắng bé gái">Áo chống nắng bé gái</option>
+      <label for="size">Chọn size (theo cân nặng của bé)</label>
+      <select id="size" name="size" required>
+        <option value="Size 1 (4-7kg)">Size 1 — bé nặng 4-7kg</option>
+        <option value="Size 2 (7-9kg)">Size 2 — bé nặng 7-9kg</option>
+        <option value="Size 3 (10-12kg)">Size 3 — bé nặng 10-12kg</option>
+        <option value="Size 4 (13-14kg)">Size 4 — bé nặng 13-14kg</option>
+        <option value="Size 5 (15-18kg)">Size 5 — bé nặng 15-18kg</option>
       </select>
+
+      <label for="color">Chọn màu/mẫu</label>
+      <select id="color" name="color" required>
+        <option value="Nâu cài cúc">Nâu cài cúc</option>
+        <option value="Hồng cài cúc">Hồng cài cúc</option>
+        <option value="Choàng ghi">Choàng ghi</option>
+        <option value="Choàng vàng">Choàng vàng</option>
+        <option value="Choàng trắng sữa">Choàng trắng sữa</option>
+        <option value="Choàng nâu">Choàng nâu</option>
+        <option value="Choàng hồng">Choàng hồng</option>
+        <option value="Khủng long vàng">Khủng long vàng</option>
+        <option value="Tai gấu trắng sữa">Tai gấu trắng sữa</option>
+        <option value="Tai gấu nâu">Tai gấu nâu</option>
+        <option value="Khủng long xanh lá">Khủng long xanh lá</option>
+      </select>
+
+      <label for="quantity">Số lượng</label>
+      <select id="quantity" name="quantity">
+        <option value="1">Mua lẻ 1 áo — 99.000đ (đã gồm ship)</option>
+        <option value="2">Combo 2 áo — 158.000đ (miễn ship)</option>
+        <option value="3">Combo 3 áo — 225.000đ (miễn ship)</option>
+      </select>
+
+      <label for="note">Ghi chú thêm (không bắt buộc)</label>
+      <textarea id="note" name="note" placeholder="VD: mua combo 2 áo nhưng muốn 2 màu khác nhau, ghi rõ ở đây..."></textarea>
+
+      <div class="price-box" id="priceBox">Tạm tính: 99.000đ</div>
 
       <button type="submit" id="submitBtn">Đặt hàng ngay</button>
       <div class="note">Chúng tôi sẽ gọi điện xác nhận đơn hàng trong vòng 30 phút.</div>
@@ -102,6 +146,23 @@ function generateEventId() {
   return 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2);
 }
 
+// Bảng giá CHÍNH THỨC (cập nhật 2026-09-06) cho Áo chống nắng (nhóm AAA):
+// mua lẻ 1 áo không được miễn ship, mua combo 2-3 áo mới miễn ship.
+const PRICE_BY_QTY = { '1': 99000, '2': 158000, '3': 225000 };
+
+function getSelectedPrice() {
+  const qty = document.getElementById('quantity').value;
+  return PRICE_BY_QTY[qty] || PRICE_BY_QTY['1'];
+}
+
+function updatePriceBox() {
+  const price = getSelectedPrice();
+  document.getElementById('priceBox').textContent =
+    'Tạm tính: ' + price.toLocaleString('vi-VN') + 'đ';
+}
+document.getElementById('quantity').addEventListener('change', updatePriceBox);
+updatePriceBox();
+
 document.getElementById('leadForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   const btn = document.getElementById('submitBtn');
@@ -110,10 +171,15 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
   statusEl.textContent = 'Đang gửi...';
 
   const eventId = generateEventId();
+  const price = getSelectedPrice();
   const payload = {
     name: document.getElementById('name').value,
     phone: document.getElementById('phone').value,
-    product: document.getElementById('product').value,
+    product: 'Áo chống nắng chống tia UV cho bé',
+    size: document.getElementById('size').value,
+    color: document.getElementById('color').value,
+    quantity: document.getElementById('quantity').value,
+    note: document.getElementById('note').value,
     event_id: eventId,
     event_source_url: window.location.href,
     fbp: getCookie('_fbp'),
@@ -127,8 +193,10 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
   if (window.fbq) {
     fbq('track', 'Lead', {
       content_name: payload.product,
+      content_ids: [payload.color],
       currency: 'VND',
-      value: 199000
+      value: price,
+      num_items: Number(payload.quantity)
     }, { eventID: eventId });
   }
 
