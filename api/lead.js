@@ -44,6 +44,7 @@ module.exports = async (req, res) => {
     const {
       name,
       phone,
+      address,
       product,
       size,
       color,
@@ -62,6 +63,13 @@ module.exports = async (req, res) => {
 
     const price = getPriceForQuantity(quantity);
     const contentName = [product, size, color].filter(Boolean).join(' - ');
+
+    // Ghi log đơn hàng đầy đủ (kể cả địa chỉ) để bạn xem trong Vercel Dashboard > Project > Logs
+    // khi chưa cấu hình SHEET_WEBHOOK_URL. Không gửi địa chỉ lên Facebook (không cần cho CAPI,
+    // tránh đưa PII dạng thô lên nền tảng quảng cáo).
+    console.log('Lead mới:', JSON.stringify({
+      name, phone, address, product, size, color, quantity, price, note, event_id
+    }));
 
     const pixelId = process.env.FB_PIXEL_ID;
     const accessToken = process.env.FB_ACCESS_TOKEN;
@@ -135,7 +143,7 @@ module.exports = async (req, res) => {
     // await fetch(process.env.SHEET_WEBHOOK_URL, {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ name, phone, product, size, color, quantity, price, note, event_id })
+    //   body: JSON.stringify({ name, phone, address, product, size, color, quantity, price, note, event_id })
     // });
     // ------------------------------------------------------------------
 
