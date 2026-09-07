@@ -6,6 +6,10 @@
 //   FB_PIXEL_ID          - Pixel ID của bạn
 //   FB_ACCESS_TOKEN       - Access token CAPI (tạo trong Events Manager > Conversions API)
 //   FB_TEST_EVENT_CODE    - (tuỳ chọn) mã test lấy trong tab "Test Events", XOÁ khi chạy thật
+//   PANCAKE_API_KEY       - API Key tạo trong Pancake POS > Cấu hình > Nâng cao > Tích hợp bên thứ 3
+//   PANCAKE_SHOP_ID       - Shop ID trên Pancake POS
+//   PANCAKE_PAGE_ID       - ID Fanpage đang chạy quảng cáo (đã liên kết với Pancake)
+//   PANCAKE_WAREHOUSE_ID  - ID kho hàng dùng để tạo đơn trên Pancake
 //
 // Chạy tốt trên Node.js 18+ (Vercel dùng sẵn, có global fetch, không cần cài thêm thư viện).
 
@@ -31,6 +35,73 @@ const PRICE_BY_QTY = { 1: 99000, 2: 158000, 3: 225000 };
 function getPriceForQuantity(quantity) {
   const qty = Number(quantity) || 1;
   return PRICE_BY_QTY[qty] || PRICE_BY_QTY[1];
+}
+
+// Tự động tạo đơn hàng bên Pancake POS (đã liên kết với Fanpage đang chạy quảng cáo)
+// để shop quản lý/lên đơn/giao hàng như đơn nhắn tin bình thường.
+// Địa chỉ khách nhập là text tự do (không có mã Tỉnh/Huyện/Xã của Pancake), nên đơn
+// tạo ra sẽ có cảnh báo "thiếu thông tin địa chỉ" — nhân viên chỉ cần xác nhận lại
+// địa chỉ với khách trước khi giao, giống cách vẫn làm khi chốt đơn qua Messenger.
+// Lỗi ở bước này KHÔNG làm hỏng phản hồi cho khách hàng trên landing page.
+async function createPancakeOrder({ name, phone, address, product, size, color, quantity, note, price }) {
+  const apiKey = process.env.PANCAKE_API_KEY;
+  const shopId = process.env.PANCAKE_SHOP_ID;
+  const pageId = process.env.PANCAKE_PAGE_ID;
+  const warehouseId = process.env.PANCAKE_WAREHOUSE_ID;
+
+  if (!apiKey || !shopId) {
+    // Chưa cấu hình Pancake -> bỏ qua, không coi là lỗi.
+    return;
+  }
+
+  try {
+    const itemName = [product, size, color].filter(Boolean).join(' - ');
+    const body = {
+      shop_id: Number(shopId),
+      bill_full_name: name,
+      bill_phone_number: phone,
+      page_id: pageId || undefined,
+      account: pageId || undefined,
+      account_name: 'Landing page quảng cáo',
+      items: [
+        {
+          quantity: Number(quantity) || 1,
+          one_time_product: true,
+          variation_info: {
+            name: itemName || 'Áo chống nắng chống tia UV cho bé',
+            retail_price: price,
+            weight: 100
+          }
+        }
+      ],
+      note: note ? `Ghi chú từ khách: ${note}` : 'Đơn tự động từ landing page quảng cáo',
+      shipping_address: {
+        full_name: name,
+        phone_number: phone,
+        address: address || ''
+      },
+      shipping_fee: 0,
+      warehouse_id: warehouseId || undefined,
+      status: 0
+    };
+
+    const res = await fetch(
+      `https://pos.pages.fm/api/v1/shops/${shopId}/orders?api_key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }
+    );
+    const json = await res.json();
+    if (!res.ok) {
+      console.error('Lỗi tạo đơn Pancake:', json);
+    } else {
+      console.log('Đã tạo đơn Pancake, order id:', json?.data?.id);
+    }
+  } catch (err) {
+    console.error('Lỗi kết nối tới Pancake:', err);
+  }
 }
 
 module.exports = async (req, res) => {
@@ -133,12 +204,14 @@ module.exports = async (req, res) => {
       // nhận lead thành công phía shop, nhưng log lại để bạn kiểm tra sau.
     }
 
+    // 3) Tự động tạo đơn hàng bên Pancake POS để shop quản lý/lên đơn/giao hàng.
+    await createPancakeOrder({ name, phone, address, product, size, color, quantity, note, price });
+
     // ------------------------------------------------------------------
     // (Tuỳ chọn) Lưu lead vào nơi khác để chăm sóc khách hàng, ví dụ:
     // - Google Sheet (qua Google Apps Script Web App URL)
-    // - Gửi vào Pancake API
     // - Ghi vào database (Postgres, Airtable, v.v.)
-    // Bỏ comment và điền URL/API key tương ứng nếu cần:
+    // Bỏ comment và điền URL tương ứng nếu cần:
     //
     // await fetch(process.env.SHEET_WEBHOOK_URL, {
     //   method: 'POST',
