@@ -43,7 +43,13 @@ function getPriceForQuantity(quantity) {
 // tạo ra sẽ có cảnh báo "thiếu thông tin địa chỉ" — nhân viên chỉ cần xác nhận lại
 // địa chỉ với khách trước khi giao, giống cách vẫn làm khi chốt đơn qua Messenger.
 // Lỗi ở bước này KHÔNG làm hỏng phản hồi cho khách hàng trên landing page.
-async function createPancakeOrder({ name, phone, address, product, size, color, quantity, note, price }) {
+//
+// "items" là danh sách áo cụ thể khách đã tích trên landing page, ví dụ:
+//   [{ size: 'Size 1 (4-7kg)', color: 'A1 - Khủng long xanh lá', quantity: 1 },
+//    { size: 'Size 2 (7-9kg)', color: 'A3 - Khủng long vàng', quantity: 1 }]
+// Mỗi phần tử sẽ thành 1 dòng sản phẩm riêng bên Pancake, để shop biết đúng
+// size/mẫu từng áo thay vì chỉ 1 dòng gộp chung như trước.
+async function createPancakeOrder({ name, phone, address, product, items, quantity, note, price }) {
   const apiKey = process.env.PANCAKE_API_KEY;
   const shopId = process.env.PANCAKE_SHOP_ID;
   const pageId = process.env.PANCAKE_PAGE_ID;
@@ -55,13 +61,33 @@ async function createPancakeOrder({ name, phone, address, product, size, color, 
   }
 
   try {
-    const itemName = [product, size, color].filter(Boolean).join(' - ');
     // Pancake tự tính tổng tiền = retail_price x quantity, còn "price" ở đây là
     // TỔNG giá combo (đã tính theo bảng giá combo, không phải giá từng áo).
     // Nên phải quy đổi ngược ra đơn giá/áo để Pancake nhân lại ra đúng tổng tiền,
     // tránh bị nhân đôi (VD combo 2 áo 158k mà gửi sai sẽ thành 316k).
     const qty = Number(quantity) || 1;
     const unitPrice = Math.round(price / qty);
+
+    const pancakeItems = (Array.isArray(items) && items.length ? items : [{ quantity: qty }])
+      .map(it => ({
+        quantity: Number(it.quantity) || 1,
+        one_time_product: true,
+        variation_info: {
+          name: [product, it.size, it.color].filter(Boolean).join(' - ') || 'Áo chống nắng chống tia UV cho bé',
+          retail_price: unitPrice,
+          weight: 100
+        }
+      }));
+
+    // Ghi rõ breakdown từng áo vào ghi chú đơn để nhân viên lên đơn dễ đối chiếu.
+    const breakdown = Array.isArray(items) && items.length
+      ? items.map(it => `${it.size || ''} - ${it.color || ''} x${it.quantity}`).join(', ')
+      : '';
+    const noteParts = [];
+    if (note) noteParts.push(`Ghi chú từ khách: ${note}`);
+    if (breakdown) noteParts.push(`Chi tiết: ${breakdown}`);
+    const finalNote = noteParts.length ? noteParts.join(' | ') : 'Đơn tự động từ landing page quảng cáo';
+
     const body = {
       shop_id: Number(shopId),
       bill_full_name: name,
@@ -69,18 +95,8 @@ async function createPancakeOrder({ name, phone, address, product, size, color, 
       page_id: pageId || undefined,
       account: pageId || undefined,
       account_name: 'Landing page quảng cáo',
-      items: [
-        {
-          quantity: qty,
-          one_time_product: true,
-          variation_info: {
-            name: itemName || 'Áo chống nắng chống tia UV cho bé',
-            retail_price: unitPrice,
-            weight: 100
-          }
-        }
-      ],
-      note: note ? `Ghi chú từ khách: ${note}` : 'Đơn tự động từ landing page quảng cáo',
+      items: pancakeItems,
+      note: finalNote,
       shipping_address: {
         full_name: name,
         phone_number: phone,
@@ -123,7 +139,8 @@ module.exports = async (req, res) => {
       phone,
       address,
       product,
-      size,
+      items, // [{ size, color, quantity }, ...] - danh sách áo khách đã tích trên landing page
+      size, // giữ lại để tương thích payload cũ (bản trước khi có bảng tích size/mẫu)
       color,
       quantity,
       note,
@@ -138,14 +155,22 @@ module.exports = async (req, res) => {
       return;
     }
 
+    // Payload cũ (không có items) vẫn được hỗ trợ để không gãy nếu có bản cache cũ của trang.
+    const resolvedItems = Array.isArray(items) && items.length
+      ? items
+      : [{ size, color, quantity: Number(quantity) || 1 }];
+
     const price = getPriceForQuantity(quantity);
-    const contentName = [product, size, color].filter(Boolean).join(' - ');
+    const contentName = resolvedItems
+      .map(it => [product, it.size, it.color].filter(Boolean).join(' - '))
+      .join(' + ');
+    const uniqueColors = [...new Set(resolvedItems.map(it => it.color).filter(Boolean))];
 
     // Ghi log đơn hàng đầy đủ (kể cả địa chỉ) để bạn xem trong Vercel Dashboard > Project > Logs
     // khi chưa cấu hình SHEET_WEBHOOK_URL. Không gửi địa chỉ lên Facebook (không cần cho CAPI,
     // tránh đưa PII dạng thô lên nền tảng quảng cáo).
     console.log('Lead mới:', JSON.stringify({
-      name, phone, address, product, size, color, quantity, price, note, event_id
+      name, phone, address, product, items: resolvedItems, quantity, price, note, event_id
     }));
 
     const pixelId = process.env.FB_PIXEL_ID;
@@ -179,7 +204,7 @@ module.exports = async (req, res) => {
           },
           custom_data: {
             content_name: contentName,
-            content_ids: color ? [color] : undefined,
+            content_ids: uniqueColors.length ? uniqueColors : undefined,
             num_items: Number(quantity) || 1,
             currency: 'VND',
             value: price
@@ -211,7 +236,7 @@ module.exports = async (req, res) => {
     }
 
     // 3) Tự động tạo đơn hàng bên Pancake POS để shop quản lý/lên đơn/giao hàng.
-    await createPancakeOrder({ name, phone, address, product, size, color, quantity, note, price });
+    await createPancakeOrder({ name, phone, address, product, items: resolvedItems, quantity, note, price });
 
     // ------------------------------------------------------------------
     // (Tuỳ chọn) Lưu lead vào nơi khác để chăm sóc khách hàng, ví dụ:
