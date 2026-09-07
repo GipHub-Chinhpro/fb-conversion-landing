@@ -25,6 +25,14 @@ function normalizePhone(phone) {
   return digits;
 }
 
+// Bảng giá CHÍNH THỨC cho Áo chống nắng (nhóm AAA), cập nhật 2026-09-06.
+// Tính giá ở SERVER (không tin giá gửi từ client) để tránh bị sửa giá qua DevTools.
+const PRICE_BY_QTY = { 1: 99000, 2: 158000, 3: 225000 };
+function getPriceForQuantity(quantity) {
+  const qty = Number(quantity) || 1;
+  return PRICE_BY_QTY[qty] || PRICE_BY_QTY[1];
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -37,6 +45,10 @@ module.exports = async (req, res) => {
       name,
       phone,
       product,
+      size,
+      color,
+      quantity,
+      note,
       event_id,
       event_source_url,
       fbp,
@@ -47,6 +59,9 @@ module.exports = async (req, res) => {
       res.status(400).json({ error: 'Thiếu phone hoặc event_id' });
       return;
     }
+
+    const price = getPriceForQuantity(quantity);
+    const contentName = [product, size, color].filter(Boolean).join(' - ');
 
     const pixelId = process.env.FB_PIXEL_ID;
     const accessToken = process.env.FB_ACCESS_TOKEN;
@@ -78,9 +93,11 @@ module.exports = async (req, res) => {
             fbc: fbc || undefined
           },
           custom_data: {
-            content_name: product,
+            content_name: contentName,
+            content_ids: color ? [color] : undefined,
+            num_items: Number(quantity) || 1,
             currency: 'VND',
-            value: 199000
+            value: price
           }
         }
       ]
@@ -118,7 +135,7 @@ module.exports = async (req, res) => {
     // await fetch(process.env.SHEET_WEBHOOK_URL, {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ name, phone, product, event_id })
+    //   body: JSON.stringify({ name, phone, product, size, color, quantity, price, note, event_id })
     // });
     // ------------------------------------------------------------------
 
