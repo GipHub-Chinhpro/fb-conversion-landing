@@ -166,6 +166,30 @@ function updatePriceBox() {
 document.getElementById('quantity').addEventListener('change', updatePriceBox);
 updatePriceBox();
 
+// Cho phép mỗi video/mẫu quảng cáo CHỈ hiển thị đúng những sản phẩm được
+// quảng cáo trong dropdown "Chọn màu/mẫu", ẩn bớt các mẫu không liên quan
+// để khách đỡ rối. Thêm ?mau=... vào cuối link quảng cáo, cách nhau bằng dấu phẩy:
+//   .../?mau=A3        -> chỉ còn "A3 - Khủng long vàng", tự chọn sẵn luôn
+//   .../?mau=A1,A3      -> chỉ còn 2 mẫu A1 và A3, khách tự chọn 1 trong 2
+//   .../?mau=A1,A3,A5,A8 -> chỉ còn đúng 4 mẫu đó (dùng cho quảng cáo nhiều sản phẩm)
+//   Không có ?mau=      -> hiển thị đầy đủ 11 mẫu như bình thường
+(function filterProductsFromUrl() {
+  const raw = new URLSearchParams(window.location.search).get('mau');
+  if (!raw) return;
+  const codes = raw.split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
+  if (!codes.length) return;
+  const colorSelect = document.getElementById('color');
+  const allOptions = Array.from(colorSelect.options);
+  const matchedAny = allOptions.some(opt => codes.includes(opt.value.split(' - ')[0].trim().toUpperCase()));
+  if (!matchedAny) return; // mã trong link không khớp mẫu nào -> giữ nguyên đầy đủ 11 mẫu, tránh dropdown trống
+  colorSelect.innerHTML = '';
+  codes.forEach(code => {
+    const opt = allOptions.find(o => o.value.split(' - ')[0].trim().toUpperCase() === code);
+    if (opt) colorSelect.appendChild(opt);
+  });
+  colorSelect.selectedIndex = 0;
+})();
+
 document.getElementById('leadForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   const btn = document.getElementById('submitBtn');
