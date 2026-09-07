@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bon Bon Shop - Đặt hàng ngay</title>
+
+<!-- ============================================================
+     META PIXEL BASE CODE
+     Thay YOUR_PIXEL_ID bên dưới bằng Pixel ID thật của bạn
+     (Lấy tại: Meta Events Manager > Data Sources > Pixel của bạn)
+============================================================ -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1145651974221911');
+fbq('track', 'PageView');
+</script>
+<noscript>
+  <img height="1" width="1" style="display:none"
+  src="https://www.facebook.com/tr?id=1145651974221911&ev=PageView&noscript=1" />
+</noscript>
+<!-- ============================================================ -->
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0; background: #fff8f5; color: #2d2d2d;
+  }
+  .hero {
+    max-width: 640px; margin: 0 auto; padding: 24px 16px 60px;
+  }
+  h1 { font-size: 24px; line-height: 1.3; }
+  .price { font-size: 22px; color: #e0562f; font-weight: 700; margin: 8px 0 20px; }
+  .form-box {
+    background: #fff; border-radius: 16px; padding: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  input, select {
+    width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px;
+    font-size: 16px;
+  }
+  button {
+    width: 100%; margin-top: 20px; padding: 14px; border: none;
+    border-radius: 12px; background: #e0562f; color: #fff;
+    font-size: 17px; font-weight: 700; cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .note { font-size: 13px; color: #777; margin-top: 10px; }
+  #status { margin-top: 14px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Áo chống nắng cho bé - Bon Bon Shop</h1>
+  <div class="price">Giá ưu đãi hôm nay: 199.000đ</div>
+
+  <div class="form-box">
+    <form id="leadForm">
+      <label for="name">Họ tên</label>
+      <input id="name" name="name" type="text" required />
+
+      <label for="phone">Số điện thoại</label>
+      <input id="phone" name="phone" type="tel" required />
+
+      <label for="product">Sản phẩm</label>
+      <select id="product" name="product">
+        <option value="Áo chống nắng bé trai">Áo chống nắng bé trai</option>
+        <option value="Áo chống nắng bé gái">Áo chống nắng bé gái</option>
+      </select>
+
+      <button type="submit" id="submitBtn">Đặt hàng ngay</button>
+      <div class="note">Chúng tôi sẽ gọi điện xác nhận đơn hàng trong vòng 30 phút.</div>
+      <div id="status"></div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Đọc cookie _fbp / _fbc (Facebook tự tạo khi Pixel chạy) để gửi kèm
+// lên server, giúp tăng độ khớp (Event Match Quality) cho CAPI.
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? match[2] : null;
+}
+
+// Sinh event_id ngẫu nhiên duy nhất cho MỖI lượt submit.
+// event_id này phải được gửi giống hệt nhau ở cả pixel (client)
+// và Conversions API (server) để Facebook loại trùng sự kiện.
+function generateEventId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+}
+
+document.getElementById('leadForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const statusEl = document.getElementById('status');
+  btn.disabled = true;
+  statusEl.textContent = 'Đang gửi...';
+
+  const eventId = generateEventId();
+  const payload = {
+    name: document.getElementById('name').value,
+    phone: document.getElementById('phone').value,
+    product: document.getElementById('product').value,
+    event_id: eventId,
+    event_source_url: window.location.href,
+    fbp: getCookie('_fbp'),
+    fbc: getCookie('_fbc') || (new URLSearchParams(window.location.search).get('fbclid')
+      ? 'fb.1.' + Date.now() + '.' + new URLSearchParams(window.location.search).get('fbclid')
+      : null)
+  };
+
+  // 1) Bắn sự kiện Lead phía TRÌNH DUYỆT (Pixel), dùng chung eventID
+  //    để Facebook ghép cặp với sự kiện server gửi ở bước 2.
+  if (window.fbq) {
+    fbq('track', 'Lead', {
+      content_name: payload.product,
+      currency: 'VND',
+      value: 199000
+    }, { eventID: eventId });
+  }
+
+  // 2) Gửi dữ liệu về webhook của chính bạn (Vercel serverless function).
+  //    Webhook này sẽ gửi tiếp sự kiện lên Facebook Conversions API (server-side)
+  //    và có thể lưu lead vào Google Sheet / CRM / Pancake...
+  try {
+    const res = await fetch('/api/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Server error');
+    statusEl.textContent = 'Đặt hàng thành công! Chúng tôi sẽ liên hệ sớm.';
+    document.getElementById('leadForm').reset();
+  } catch (err) {
+    statusEl.textContent = 'Có lỗi xảy ra, vui lòng thử lại hoặc nhắn tin cho shop.';
+    btn.disabled = false;
+  }
+});
+</script>
+
+</body>
+</html>
