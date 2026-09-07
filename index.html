@@ -55,6 +55,7 @@ fbq('track', 'PageView');
     font-size: 17px; font-weight: 700; cursor: pointer;
   }
   button:disabled { opacity: 0.6; cursor: not-allowed; }
+  button.btn-success { background: #2d7d46; }
   .note { font-size: 13px; color: #777; margin-top: 10px; }
   #status { margin-top: 14px; font-weight: 600; }
   .price-sub { font-size: 14px; color: #555; font-weight: 400; margin: -14px 0 20px; }
@@ -387,6 +388,9 @@ updatePriceBox();
 refreshCheckboxAvailability();
 updateMatrixHint();
 
+const BTN_DEFAULT_TEXT = 'Đặt hàng ngay';
+let btnSuccessTimer = null;
+
 document.getElementById('leadForm').addEventListener('submit', async function (e) {
   e.preventDefault();
   const statusEl = document.getElementById('status');
@@ -399,6 +403,9 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
   }
 
   const btn = document.getElementById('submitBtn');
+  clearTimeout(btnSuccessTimer);
+  btn.classList.remove('btn-success');
+  btn.textContent = BTN_DEFAULT_TEXT;
   btn.disabled = true;
   statusEl.style.color = '';
   statusEl.textContent = 'Đang gửi...';
@@ -449,7 +456,7 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
     });
     if (!res.ok) throw new Error('Server error');
     statusEl.style.color = '#2d7d46';
-    statusEl.textContent = 'Đặt hàng thành công. Cảm ơn quý khách rất nhiều. Hotline: 0912628007';
+    statusEl.textContent = 'Cảm ơn quý khách rất nhiều. Hotline: 0912628007';
     document.getElementById('leadForm').reset();
     buildMatrix();
     updatePriceBox();
@@ -457,6 +464,12 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
     updateMatrixHint();
     refreshAllBlockToggles();
     btn.disabled = false;
+    btn.classList.add('btn-success');
+    btn.textContent = '✓ Đặt hàng thành công';
+    btnSuccessTimer = setTimeout(function () {
+      btn.classList.remove('btn-success');
+      btn.textContent = BTN_DEFAULT_TEXT;
+    }, 3000);
     statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (err) {
     statusEl.style.color = '#b8401f';
