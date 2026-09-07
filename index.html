@@ -448,6 +448,7 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Server error');
+    statusEl.style.color = '#2d7d46';
     statusEl.textContent = 'Đặt hàng thành công. Cảm ơn quý khách rất nhiều. Hotline: 0912628007';
     document.getElementById('leadForm').reset();
     buildMatrix();
@@ -455,9 +456,13 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
     refreshCheckboxAvailability();
     updateMatrixHint();
     refreshAllBlockToggles();
+    btn.disabled = false;
+    statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (err) {
+    statusEl.style.color = '#b8401f';
     statusEl.textContent = 'Có lỗi xảy ra, vui lòng thử lại hoặc nhắn tin cho shop.';
     btn.disabled = false;
+    statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 });
 </script>
