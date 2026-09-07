@@ -66,6 +66,21 @@ fbq('track', 'PageView');
     width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px;
     font-size: 16px; font-family: inherit; resize: vertical; min-height: 60px;
   }
+  /* Bảng chọn Size + Mẫu (tích chọn) */
+  .size-block {
+    border: 1px solid #eee; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px;
+  }
+  .size-block-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+  .chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: flex; align-items: center; gap: 6px; border: 1px solid #ddd; border-radius: 999px;
+    padding: 6px 10px; font-size: 13px; font-weight: 500; cursor: pointer; background: #fafafa;
+  }
+  .chip input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: #e0562f; }
+  .chip input[type="checkbox"]:disabled { cursor: not-allowed; }
+  .chip.checked { border-color: #e0562f; background: #fff3ec; color: #b8401f; }
+  .chip.disabled { opacity: 0.45; cursor: not-allowed; }
+  #matrixHint { font-size: 13px; font-weight: 600; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -90,44 +105,24 @@ fbq('track', 'PageView');
       <label for="address">Địa chỉ nhận hàng (Địa Chỉ Cũ)</label>
       <input id="address" name="address" type="text" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" />
 
-      <label for="size">Chọn size (theo cân nặng của bé)</label>
-      <select id="size" name="size" required>
-        <option value="Size 1 (4-7kg)">Size 1 — bé nặng 4-7kg</option>
-        <option value="Size 2 (7-9kg)">Size 2 — bé nặng 7-9kg</option>
-        <option value="Size 3 (10-12kg)">Size 3 — bé nặng 10-12kg</option>
-        <option value="Size 4 (13-14kg)">Size 4 — bé nặng 13-14kg</option>
-        <option value="Size 5 (15-18kg)">Size 5 — bé nặng 15-18kg</option>
-      </select>
-
-      <label for="color">Chọn màu/mẫu</label>
-      <select id="color" name="color" required>
-        <option value="A11 - Nâu cài cúc">A11 - Nâu cài cúc</option>
-        <option value="A10 - Hồng cài cúc">A10 - Hồng cài cúc</option>
-        <option value="A9 - Choàng ghi">A9 - Choàng ghi</option>
-        <option value="A8 - Choàng vàng">A8 - Choàng vàng</option>
-        <option value="A7 - Choàng trắng sữa">A7 - Choàng trắng sữa</option>
-        <option value="A6 - Choàng nâu">A6 - Choàng nâu</option>
-        <option value="A5 - Choàng hồng">A5 - Choàng hồng</option>
-        <option value="A3 - Khủng long vàng">A3 - Khủng long vàng</option>
-        <option value="A4 - Tai gấu trắng sữa">A4 - Tai gấu trắng sữa</option>
-        <option value="A2 - Tai gấu nâu">A2 - Tai gấu nâu</option>
-        <option value="A1 - Khủng long xanh lá">A1 - Khủng long xanh lá</option>
-      </select>
-
-      <label for="quantity">Số lượng</label>
+      <label for="quantity">Số lượng (Tổng số mua)</label>
       <select id="quantity" name="quantity">
         <option value="1">Mua lẻ 1 áo — 99.000đ (đã gồm ship)</option>
         <option value="2">Combo 2 áo — 158.000đ (miễn ship)</option>
         <option value="3">Combo 3 áo — 225.000đ (miễn ship)</option>
       </select>
 
+      <label>Chọn size &amp; mẫu cho từng áo</label>
+      <div id="sizeMauMatrix"></div>
+      <div id="matrixHint"></div>
+
       <label for="note">Ghi chú thêm (không bắt buộc)</label>
-      <textarea id="note" name="note" placeholder="VD: mua combo 2 áo nhưng muốn 2 màu khác nhau, ghi rõ ở đây..."></textarea>
+      <textarea id="note" name="note" placeholder="VD: giao giờ hành chính, hẹn giờ giao..."></textarea>
 
       <div class="price-box" id="priceBox">Tổng Tiền Thanh Toán: 99.000đ</div>
 
       <button type="submit" id="submitBtn">Đặt hàng ngay</button>
-      <div class="note">Chúng tôi sẽ gọi điện xác nhận đơn hàng trong vòng 30 phút.</div>
+      <div class="note">Chúng tôi sẽ gửi hàng luôn hôm nay, khoảng từ 2-4 hôm nhận được hàng.</div>
       <div id="status"></div>
     </form>
   </div>
@@ -163,50 +158,224 @@ function updatePriceBox() {
   document.getElementById('priceBox').textContent =
     'Tổng Tiền Thanh Toán: ' + price.toLocaleString('vi-VN') + 'đ';
 }
-document.getElementById('quantity').addEventListener('change', updatePriceBox);
-updatePriceBox();
 
-// Cho phép mỗi video/mẫu quảng cáo CHỈ hiển thị đúng những sản phẩm được
-// quảng cáo trong dropdown "Chọn màu/mẫu", ẩn bớt các mẫu không liên quan
-// để khách đỡ rối. Thêm ?mau=... vào cuối link quảng cáo, cách nhau bằng dấu phẩy:
-//   .../?mau=A3        -> chỉ còn "A3 - Khủng long vàng", tự chọn sẵn luôn
-//   .../?mau=A1,A3      -> chỉ còn 2 mẫu A1 và A3, khách tự chọn 1 trong 2
-//   .../?mau=A1,A3,A5,A8 -> chỉ còn đúng 4 mẫu đó (dùng cho quảng cáo nhiều sản phẩm)
-//   Không có ?mau=      -> hiển thị đầy đủ 11 mẫu như bình thường
-(function filterProductsFromUrl() {
+// ============================================================
+// BẢNG CHỌN SIZE + MẪU (tích chọn theo từng size)
+// Mỗi Size (1-5) là 1 khối, bên trong là các ô vuông tích Mẫu.
+// - Tích ĐÚNG 1 ô  -> hiểu là TẤT CẢ áo trong đơn đều giống hệt ô đó
+//   (VD Số lượng = 2, tích Size1+A1 -> 2 áo Size1 - A1).
+// - Tích ĐÚNG BẰNG Số lượng đã chọn -> mỗi ô = 1 áo riêng, biết chính
+//   xác size/mẫu từng áo (VD Số lượng = 2: tích Size1+A1 và Size2+A3
+//   -> 1 áo Size1-A1 + 1 áo Size2-A3).
+// - Tích sai số lượng (khác 1 và khác Số lượng) -> chặn gửi đơn.
+//
+// Cho phép mỗi video/mẫu quảng cáo CHỈ hiển thị đúng những mẫu được
+// quảng cáo (giống tính năng cũ), thêm ?mau=... vào cuối link quảng cáo,
+// cách nhau bằng dấu phẩy, áp dụng cho TẤT CẢ các khối size:
+//   .../?mau=A3          -> mỗi khối size chỉ còn cột "A3 - Khủng long vàng"
+//   .../?mau=A1,A3        -> mỗi khối size còn 2 cột A1 và A3
+//   Không có ?mau=        -> mỗi khối size hiện đủ 11 mẫu như bình thường
+// ============================================================
+const SIZES = [
+  { value: 'Size 1 (4-7kg)', label: 'Size 1 — bé nặng 4-7kg' },
+  { value: 'Size 2 (7-9kg)', label: 'Size 2 — bé nặng 7-9kg' },
+  { value: 'Size 3 (10-12kg)', label: 'Size 3 — bé nặng 10-12kg' },
+  { value: 'Size 4 (13-14kg)', label: 'Size 4 — bé nặng 13-14kg' },
+  { value: 'Size 5 (15-18kg)', label: 'Size 5 — bé nặng 15-18kg' }
+];
+
+const ALL_MAU = [
+  { code: 'A11', value: 'A11 - Nâu cài cúc' },
+  { code: 'A10', value: 'A10 - Hồng cài cúc' },
+  { code: 'A9', value: 'A9 - Choàng ghi' },
+  { code: 'A8', value: 'A8 - Choàng vàng' },
+  { code: 'A7', value: 'A7 - Choàng trắng sữa' },
+  { code: 'A6', value: 'A6 - Choàng nâu' },
+  { code: 'A5', value: 'A5 - Choàng hồng' },
+  { code: 'A3', value: 'A3 - Khủng long vàng' },
+  { code: 'A4', value: 'A4 - Tai gấu trắng sữa' },
+  { code: 'A2', value: 'A2 - Tai gấu nâu' },
+  { code: 'A1', value: 'A1 - Khủng long xanh lá' }
+];
+
+function getFilteredMau() {
   const raw = new URLSearchParams(window.location.search).get('mau');
-  if (!raw) return;
+  if (!raw) return ALL_MAU;
   const codes = raw.split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
-  if (!codes.length) return;
-  const colorSelect = document.getElementById('color');
-  const allOptions = Array.from(colorSelect.options);
-  const matchedAny = allOptions.some(opt => codes.includes(opt.value.split(' - ')[0].trim().toUpperCase()));
-  if (!matchedAny) return; // mã trong link không khớp mẫu nào -> giữ nguyên đầy đủ 11 mẫu, tránh dropdown trống
-  colorSelect.innerHTML = '';
-  codes.forEach(code => {
-    const opt = allOptions.find(o => o.value.split(' - ')[0].trim().toUpperCase() === code);
-    if (opt) colorSelect.appendChild(opt);
+  if (!codes.length) return ALL_MAU;
+  const filtered = ALL_MAU.filter(m => codes.includes(m.code));
+  return filtered.length ? filtered : ALL_MAU; // mã không khớp mẫu nào -> giữ đủ 11 mẫu
+}
+
+function getCheckedItems() {
+  return Array.from(document.querySelectorAll('#sizeMauMatrix input[type="checkbox"]:checked'))
+    .map(cb => ({ size: cb.dataset.size, color: cb.dataset.color }));
+}
+
+function refreshCheckboxAvailability() {
+  const qty = Number(document.getElementById('quantity').value) || 1;
+  const checked = getCheckedItems();
+  const atLimit = qty > 1 && checked.length >= qty;
+  document.querySelectorAll('#sizeMauMatrix input[type="checkbox"]').forEach(cb => {
+    const shouldDisable = !cb.checked && atLimit;
+    cb.disabled = shouldDisable;
+    cb.closest('.chip').classList.toggle('disabled', shouldDisable);
   });
-  colorSelect.selectedIndex = 0;
-})();
+}
+
+function updateMatrixHint() {
+  const checked = getCheckedItems();
+  const qty = Number(document.getElementById('quantity').value) || 1;
+  const hint = document.getElementById('matrixHint');
+  if (checked.length === 0) {
+    hint.textContent = qty === 1
+      ? 'Vui lòng tích chọn 1 size + mẫu cho áo.'
+      : 'Tích 1 ô nếu ' + qty + ' áo giống hệt nhau, hoặc tích đúng ' + qty + ' ô nếu muốn mỗi áo 1 size/mẫu khác nhau.';
+    hint.style.color = '#b8401f';
+  } else if (checked.length === 1) {
+    hint.textContent = qty === 1
+      ? 'Đã chọn: ' + checked[0].size + ' - ' + checked[0].color
+      : 'Đã chọn 1 mẫu — tính là ' + qty + ' áo giống nhau (' + checked[0].size + ' - ' + checked[0].color + ').';
+    hint.style.color = '#2d7d46';
+  } else if (checked.length === qty) {
+    hint.textContent = 'Đã chọn đủ ' + qty + ' áo, mỗi áo 1 size/mẫu riêng.';
+    hint.style.color = '#2d7d46';
+  } else {
+    hint.textContent = 'Đã tích ' + checked.length + ' ô nhưng Số lượng đang chọn là ' + qty +
+      '. Vui lòng tích đúng 1 ô (để nhân theo số lượng) hoặc đúng ' + qty + ' ô.';
+    hint.style.color = '#b8401f';
+  }
+}
+
+function onCheckboxChange(input, chip) {
+  const qty = Number(document.getElementById('quantity').value) || 1;
+  if (qty === 1) {
+    // Chỉ 1 áo -> hoạt động như radio, tích ô khác sẽ bỏ tích ô cũ.
+    document.querySelectorAll('#sizeMauMatrix input[type="checkbox"]').forEach(cb => {
+      if (cb !== input && cb.checked) {
+        cb.checked = false;
+        cb.closest('.chip').classList.remove('checked');
+      }
+    });
+  }
+  chip.classList.toggle('checked', input.checked);
+  refreshCheckboxAvailability();
+  updateMatrixHint();
+}
+
+function buildMatrix() {
+  const mauList = getFilteredMau();
+  const container = document.getElementById('sizeMauMatrix');
+  container.innerHTML = '';
+  SIZES.forEach((size, sIdx) => {
+    const block = document.createElement('div');
+    block.className = 'size-block';
+
+    const title = document.createElement('div');
+    title.className = 'size-block-title';
+    title.textContent = size.label;
+    block.appendChild(title);
+
+    const chipWrap = document.createElement('div');
+    chipWrap.className = 'chip-wrap';
+
+    mauList.forEach((mau, mIdx) => {
+      const id = 'chk_' + sIdx + '_' + mIdx;
+      const chip = document.createElement('label');
+      chip.className = 'chip';
+      chip.setAttribute('for', id);
+
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.id = id;
+      input.dataset.size = size.value;
+      input.dataset.color = mau.value;
+      input.addEventListener('change', function () { onCheckboxChange(input, chip); });
+
+      const span = document.createElement('span');
+      span.textContent = mau.value;
+
+      chip.appendChild(input);
+      chip.appendChild(span);
+      chipWrap.appendChild(chip);
+    });
+
+    block.appendChild(chipWrap);
+    container.appendChild(block);
+  });
+}
+
+// Gom các ô đã tích thành danh sách áo cụ thể (size, color, quantity).
+// Trả về null nếu số ô tích không hợp lệ (khác 1 và khác Số lượng đã chọn).
+function resolveItems() {
+  const checked = getCheckedItems();
+  const qty = Number(document.getElementById('quantity').value) || 1;
+
+  if (checked.length === 1) {
+    return [{ size: checked[0].size, color: checked[0].color, quantity: qty }];
+  }
+
+  if (checked.length === qty) {
+    const map = new Map();
+    checked.forEach(it => {
+      const key = it.size + '|' + it.color;
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    return Array.from(map.entries()).map(([key, q]) => {
+      const [size, color] = key.split('|');
+      return { size, color, quantity: q };
+    });
+  }
+
+  return null;
+}
+
+document.getElementById('quantity').addEventListener('change', function () {
+  updatePriceBox();
+  // Đổi Số lượng -> bỏ tích hết để tránh trạng thái không khớp, khách tích lại.
+  document.querySelectorAll('#sizeMauMatrix input[type="checkbox"]:checked').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.chip').classList.remove('checked');
+  });
+  refreshCheckboxAvailability();
+  updateMatrixHint();
+});
+
+buildMatrix();
+updatePriceBox();
+refreshCheckboxAvailability();
+updateMatrixHint();
 
 document.getElementById('leadForm').addEventListener('submit', async function (e) {
   e.preventDefault();
-  const btn = document.getElementById('submitBtn');
   const statusEl = document.getElementById('status');
+
+  const items = resolveItems();
+  if (!items) {
+    statusEl.textContent = 'Vui lòng tích đúng size/mẫu: tích 1 ô hoặc tích đúng số lượng đã chọn ở trên.';
+    statusEl.style.color = '#b8401f';
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
   btn.disabled = true;
+  statusEl.style.color = '';
   statusEl.textContent = 'Đang gửi...';
 
   const eventId = generateEventId();
+  const qty = Number(document.getElementById('quantity').value) || 1;
   const price = getSelectedPrice();
+  const product = 'Áo chống nắng chống tia UV cho bé';
+  const uniqueColors = [...new Set(items.map(i => i.color))];
+  const contentName = items.map(i => [product, i.size, i.color].filter(Boolean).join(' - ')).join(' + ');
+
   const payload = {
     name: document.getElementById('name').value,
     phone: document.getElementById('phone').value,
     address: document.getElementById('address').value,
-    product: 'Áo chống nắng chống tia UV cho bé',
-    size: document.getElementById('size').value,
-    color: document.getElementById('color').value,
-    quantity: document.getElementById('quantity').value,
+    product: product,
+    items: items,
+    quantity: qty,
     note: document.getElementById('note').value,
     event_id: eventId,
     event_source_url: window.location.href,
@@ -220,17 +389,17 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
   //    để Facebook ghép cặp với sự kiện server gửi ở bước 2.
   if (window.fbq) {
     fbq('track', 'Lead', {
-      content_name: payload.product,
-      content_ids: [payload.color],
+      content_name: contentName,
+      content_ids: uniqueColors,
       currency: 'VND',
       value: price,
-      num_items: Number(payload.quantity)
+      num_items: qty
     }, { eventID: eventId });
   }
 
   // 2) Gửi dữ liệu về webhook của chính bạn (Vercel serverless function).
   //    Webhook này sẽ gửi tiếp sự kiện lên Facebook Conversions API (server-side)
-  //    và có thể lưu lead vào Google Sheet / CRM / Pancake...
+  //    và tự động tạo đơn bên Pancake POS.
   try {
     const res = await fetch('/api/lead', {
       method: 'POST',
@@ -238,8 +407,12 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('Server error');
-    statusEl.textContent = 'Đặt hàng thành công! Chúng tôi sẽ liên hệ sớm.';
+    statusEl.textContent = 'Đặt hàng thành công. Cảm ơn quý khách rất nhiều. Hotline: 0912628007';
     document.getElementById('leadForm').reset();
+    buildMatrix();
+    updatePriceBox();
+    refreshCheckboxAvailability();
+    updateMatrixHint();
   } catch (err) {
     statusEl.textContent = 'Có lỗi xảy ra, vui lòng thử lại hoặc nhắn tin cho shop.';
     btn.disabled = false;
