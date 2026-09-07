@@ -248,8 +248,10 @@ function updateMatrixHint() {
     hint.textContent = 'Đã chọn đủ ' + qty + ' áo, mỗi áo 1 size/mẫu riêng.';
     hint.style.color = '#2d7d46';
   } else {
-    hint.textContent = 'Đã tích ' + checked.length + ' ô nhưng Số lượng đang chọn là ' + qty +
-      '. Vui lòng tích đúng 1 ô (để nhân theo số lượng) hoặc đúng ' + qty + ' ô.';
+    hint.textContent = qty === 1
+      ? 'Đã tích ' + checked.length + ' mẫu nhưng chỉ mua 1 áo — vui lòng bỏ bớt, chỉ tích đúng 1 mẫu.'
+      : 'Đã tích ' + checked.length + ' ô nhưng Số lượng đang chọn là ' + qty +
+        '. Vui lòng tích đúng 1 ô (để nhân theo số lượng) hoặc đúng ' + qty + ' ô.';
     hint.style.color = '#b8401f';
   }
 }
@@ -271,17 +273,11 @@ function refreshAllBlockToggles() {
   document.querySelectorAll('#sizeMauMatrix .size-block').forEach(refreshBlockToggle);
 }
 
+// Tích mẫu nào thì mẫu đó hiện "đã chọn" ngay, không tự động bỏ tích mẫu khác
+// (kể cả khi Số lượng = 1) — để khách luôn thấy đúng những gì mình đã tích.
+// Nếu số mẫu tích chưa khớp Số lượng đã chọn, dòng nhắc bên dưới (updateMatrixHint)
+// sẽ báo rõ để khách tự điều chỉnh trước khi đặt hàng.
 function onCheckboxChange(input, chip) {
-  const qty = Number(document.getElementById('quantity').value) || 1;
-  if (qty === 1) {
-    // Chỉ 1 áo -> hoạt động như radio, tích ô khác sẽ bỏ tích ô cũ.
-    document.querySelectorAll('#sizeMauMatrix input[type="checkbox"]').forEach(cb => {
-      if (cb !== input && cb.checked) {
-        cb.checked = false;
-        cb.closest('.chip').classList.remove('checked');
-      }
-    });
-  }
   chip.classList.toggle('checked', input.checked);
   refreshCheckboxAvailability();
   updateMatrixHint();
