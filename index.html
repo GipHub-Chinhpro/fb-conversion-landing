@@ -66,12 +66,19 @@ fbq('track', 'PageView');
     width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px;
     font-size: 16px; font-family: inherit; resize: vertical; min-height: 60px;
   }
-  /* Bảng chọn Size + Mẫu (tích chọn) */
+  /* Bảng chọn Size + Mẫu (tích chọn, thu gọn theo từng size) */
   .size-block {
     border: 1px solid #eee; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px;
   }
-  .size-block-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
-  .chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+  .size-block-header {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+    cursor: pointer; flex-wrap: wrap;
+  }
+  .size-block-header:hover { opacity: 0.85; }
+  .size-block-title { font-weight: 700; font-size: 15px; }
+  .size-block-toggle { font-size: 13px; color: #e0562f; font-weight: 600; text-align: right; }
+  .chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip-wrap.collapsed { display: none; }
   .chip {
     display: flex; align-items: center; gap: 6px; border: 1px solid #ddd; border-radius: 999px;
     padding: 6px 10px; font-size: 13px; font-weight: 500; cursor: pointer; background: #fafafa;
@@ -247,6 +254,23 @@ function updateMatrixHint() {
   }
 }
 
+// Cập nhật chữ trên dòng "Chọn mẫu ▾" của 1 khối Size: nếu khối đó đang có
+// mẫu đã tích thì hiện luôn tên mẫu ngay cả khi đang thu gọn, để khách/khỏi
+// cần mở ra lại mới biết mình đã chọn gì.
+function refreshBlockToggle(block) {
+  const toggle = block.querySelector('.size-block-toggle');
+  const chipWrap = block.querySelector('.chip-wrap');
+  const isCollapsed = chipWrap.classList.contains('collapsed');
+  const arrow = isCollapsed ? '▾' : '▴';
+  const checkedNames = Array.from(chipWrap.querySelectorAll('input[type="checkbox"]:checked'))
+    .map(cb => cb.dataset.color);
+  toggle.textContent = (checkedNames.length ? 'Đã chọn: ' + checkedNames.join(', ') : 'Chọn mẫu') + ' ' + arrow;
+}
+
+function refreshAllBlockToggles() {
+  document.querySelectorAll('#sizeMauMatrix .size-block').forEach(refreshBlockToggle);
+}
+
 function onCheckboxChange(input, chip) {
   const qty = Number(document.getElementById('quantity').value) || 1;
   if (qty === 1) {
@@ -261,6 +285,7 @@ function onCheckboxChange(input, chip) {
   chip.classList.toggle('checked', input.checked);
   refreshCheckboxAvailability();
   updateMatrixHint();
+  refreshAllBlockToggles();
 }
 
 function buildMatrix() {
@@ -271,13 +296,24 @@ function buildMatrix() {
     const block = document.createElement('div');
     block.className = 'size-block';
 
-    const title = document.createElement('div');
+    // Dòng tiêu đề bấm được để thu gọn/mở rộng phần tích mẫu bên dưới.
+    const header = document.createElement('div');
+    header.className = 'size-block-header';
+
+    const title = document.createElement('span');
     title.className = 'size-block-title';
     title.textContent = size.label;
-    block.appendChild(title);
+
+    const toggle = document.createElement('span');
+    toggle.className = 'size-block-toggle';
+    toggle.textContent = 'Chọn mẫu ▾';
+
+    header.appendChild(title);
+    header.appendChild(toggle);
+    block.appendChild(header);
 
     const chipWrap = document.createElement('div');
-    chipWrap.className = 'chip-wrap';
+    chipWrap.className = 'chip-wrap collapsed'; // mặc định thu gọn cho gọn trang
 
     mauList.forEach((mau, mIdx) => {
       const id = 'chk_' + sIdx + '_' + mIdx;
@@ -291,6 +327,8 @@ function buildMatrix() {
       input.dataset.size = size.value;
       input.dataset.color = mau.value;
       input.addEventListener('change', function () { onCheckboxChange(input, chip); });
+      // Tránh bấm vào ô tích lại kích hoạt luôn sự kiện click trên header (đóng khối).
+      input.addEventListener('click', function (evt) { evt.stopPropagation(); });
 
       const span = document.createElement('span');
       span.textContent = mau.value;
@@ -300,8 +338,14 @@ function buildMatrix() {
       chipWrap.appendChild(chip);
     });
 
+    header.addEventListener('click', function () {
+      chipWrap.classList.toggle('collapsed');
+      refreshBlockToggle(block);
+    });
+
     block.appendChild(chipWrap);
     container.appendChild(block);
+    refreshBlockToggle(block);
   });
 }
 
@@ -339,6 +383,7 @@ document.getElementById('quantity').addEventListener('change', function () {
   });
   refreshCheckboxAvailability();
   updateMatrixHint();
+  refreshAllBlockToggles();
 });
 
 buildMatrix();
@@ -413,6 +458,7 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
     updatePriceBox();
     refreshCheckboxAvailability();
     updateMatrixHint();
+    refreshAllBlockToggles();
   } catch (err) {
     statusEl.textContent = 'Có lỗi xảy ra, vui lòng thử lại hoặc nhắn tin cho shop.';
     btn.disabled = false;
