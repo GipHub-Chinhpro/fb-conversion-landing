@@ -316,7 +316,7 @@ function buildMatrix() {
     block.appendChild(header);
 
     const chipWrap = document.createElement('div');
-    chipWrap.className = 'chip-wrap collapsed'; // mặc định thu gọn cho gọn trang
+    chipWrap.className = 'chip-wrap'; // không thu gọn mặc định — tránh khách bỏ sót bước chọn mẫu
 
     mauList.forEach((mau, mIdx) => {
       const id = 'chk_' + sIdx + '_' + mIdx;
@@ -401,10 +401,11 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
   e.preventDefault();
   const statusEl = document.getElementById('status');
 
-  const items = resolveItems();
+   const items = resolveItems();
   if (!items) {
     statusEl.textContent = 'Vui lòng tích đúng size/mẫu: tích 1 ô hoặc tích đúng số lượng đã chọn ở trên.';
     statusEl.style.color = '#b8401f';
+    statusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
 
