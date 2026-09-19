@@ -251,10 +251,17 @@ module.exports = async (req, res) => {
       )
         .then(async (fbRes) => {
           const json = await fbRes.json();
-          if (!fbRes.ok) {
-            console.error('Lỗi gửi CAPI:', json);
-            // Không nên để khách hàng thấy lỗi kỹ thuật của Facebook — vẫn coi là
-            // nhận lead thành công phía shop, nhưng log lại để bạn kiểm tra sau.
+          if (!fbRes.ok || json.error) {
+            console.error('Loi gui CAPI (Facebook tu choi/bao loi su kien):', JSON.stringify(json));
+            // Khong nen de khach hang thay loi ky thuat cua Facebook - van coi la
+            // nhan lead thanh cong phia shop, nhung LUON log lai de kiem tra sau.
+            // Day la dau hieu DUY NHAT khi Facebook tu choi su kien that su (vd sai/het
+            // han FB_ACCESS_TOKEN, sai FB_PIXEL_ID) - kiem tra dinh ky Vercel Runtime
+            // Logs, dac biet ngay sau khi doi bien moi truong dung chung (xem Su co 2
+            // trong landing-page-facebook-pancake.md - PANCAKE_API_KEY bi sua nham gay
+            // loi am tham 6 ngay lien tuc vi khong ai kiem tra log).
+          } else if (Array.isArray(json.messages) && json.messages.length > 0) {
+            console.warn('CAPI thanh cong nhung Facebook co canh bao:', JSON.stringify(json.messages));
           }
           return json;
         })
