@@ -29,6 +29,22 @@ function normalizePhone(phone) {
   return digits;
 }
 
+// Gọi 1 API bên ngoài có giới hạn thời gian chờ riêng — tránh trường hợp Facebook
+// hoặc Pancake phản hồi chậm kéo dài làm cả hàm bị Vercel cắt ngang giữa chừng vì
+// vượt quá 10 giây (giới hạn cứng của gói Hobby, không cấu hình lại được).
+// Phát hiện 2026-09-19: /api/lead và /api/lead-body đều từng bị
+// "FUNCTION_INVOCATION_TIMEOUT" vì gọi Facebook rồi mới gọi Pancake LẦN LƯỢT — cộng
+// dồn thời gian dễ vượt 10 giây. Sửa: giới hạn mỗi API 8 giây + gọi SONG SONG (xem bên dưới).
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Bảng giá CHÍNH THỨC cho Body lông nhung (nhóm C1-C5), cập nhật 2026-09-19:
 // 1 bộ 169k + 20k ship = 189k | Combo 2 bộ 329k (miễn ship) | Combo 3 bộ 449k (miễn ship).
 // Tính giá ở SERVER (không tin giá gửi từ client) để tránh bị sửa giá qua DevTools.
@@ -110,13 +126,14 @@ async function createPancakeOrder({ name, phone, address, product, items, quanti
       status: 0
     };
 
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `https://pos.pages.fm/api/v1/shops/${shopId}/orders?api_key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
-      }
+      },
+      8000
     );
     const json = await res.json();
     if (!res.ok) {
@@ -125,7 +142,7 @@ async function createPancakeOrder({ name, phone, address, product, items, quanti
       console.log('Đã tạo đơn Pancake (body lông nhung), order id:', json?.data?.id);
     }
   } catch (err) {
-    console.error('Lỗi kết nối tới Pancake (body lông nhung):', err);
+    console.error('Lỗi kết nối tới Pancake (body lông nhung, có thể do timeout 8s):', err);
   }
 }
 
@@ -220,25 +237,35 @@ module.exports = async (req, res) => {
       eventPayload.test_event_code = process.env.FB_TEST_EVENT_CODE;
     }
 
-    const fbRes = await fetch(
-      `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${accessToken}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventPayload)
-      }
-    );
-
-    const fbJson = await fbRes.json();
-
-    if (!fbRes.ok) {
-      console.error('Lỗi gửi CAPI (body lông nhung):', fbJson);
-      // Không nên để khách hàng thấy lỗi kỹ thuật của Facebook — vẫn coi là
-      // nhận lead thành công phía shop, nhưng log lại để kiểm tra sau.
-    }
-
-    // Tự động tạo đơn hàng bên Pancake POS để shop quản lý/lên đơn/giao hàng.
-    await createPancakeOrder({ name, phone, address, product, items: resolvedItems, quantity, note, price });
+    // Gọi CAPI (Facebook) và tạo đơn Pancake CÙNG LÚC (song song) thay vì lần lượt —
+    // 2 việc này độc lập nhau, chạy song song giảm gần một nửa thời gian chờ so với
+    // chạy tuần tự, tránh bị Vercel cắt ngang do vượt quá 10 giây (giới hạn cứng gói
+    // Hobby — đã từng xảy ra thật, xem Vercel Logs 2026-09-19, timeout cả 2 route).
+    const [fbJson] = await Promise.all([
+      fetchWithTimeout(
+        `https://graph.facebook.com/v21.0/${pixelId}/events?access_token=${accessToken}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventPayload)
+        },
+        8000
+      )
+        .then(async (fbRes) => {
+          const json = await fbRes.json();
+          if (!fbRes.ok) {
+            console.error('Lỗi gửi CAPI (body lông nhung):', json);
+            // Không nên để khách hàng thấy lỗi kỹ thuật của Facebook — vẫn coi là
+            // nhận lead thành công phía shop, nhưng log lại để kiểm tra sau.
+          }
+          return json;
+        })
+        .catch((err) => {
+          console.error('Lỗi gửi CAPI (body lông nhung, timeout 8s hoặc mất kết nối):', err);
+          return null;
+        }),
+      createPancakeOrder({ name, phone, address, product, items: resolvedItems, quantity, note, price })
+    ]);
 
     res.status(200).json({ success: true, fb_response: fbJson });
   } catch (err) {
