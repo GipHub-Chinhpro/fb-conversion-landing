@@ -3,6 +3,9 @@
   "functions": {
     "api/lead.js": {
       "maxDuration": 10
+    },
+    "api/lead-body.js": {
+      "maxDuration": 10
     }
   }
 }
