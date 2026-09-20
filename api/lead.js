@@ -286,7 +286,7 @@ module.exports = async (req, res) => {
     // });
     // ------------------------------------------------------------------
 
-    res.status(200).json({ success: true, fb_response: fbJson });
+    res.status(200).json({ success: true, fb_response: fbJson, debug_ip: { forwarded, clientIp, xRealIp: req.headers['x-real-ip'], xVercelForwardedFor: req.headers['x-vercel-forwarded-for'] } });
   } catch (err) {
     console.error('Webhook error:', err);
     res.status(500).json({ error: 'Internal error' });
