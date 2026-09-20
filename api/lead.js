@@ -201,7 +201,6 @@ module.exports = async (req, res) => {
     // Lấy IP thật của khách (Vercel truyền qua header x-forwarded-for)
     const forwarded = req.headers['x-forwarded-for'];
     const clientIp = forwarded ? forwarded.split(',')[0].trim() : req.socket?.remoteAddress;
-    console.log('DEBUG IP HEADERS:', JSON.stringify({ 'x-forwarded-for': req.headers['x-forwarded-for'], 'x-real-ip': req.headers['x-real-ip'], 'x-vercel-forwarded-for': req.headers['x-vercel-forwarded-for'], socketRemote: req.socket?.remoteAddress, clientIp }));
     const userAgent = req.headers['user-agent'];
 
     const eventPayload = {
@@ -286,7 +285,7 @@ module.exports = async (req, res) => {
     // });
     // ------------------------------------------------------------------
 
-    res.status(200).json({ success: true, fb_response: fbJson, debug_ip: { forwarded, clientIp, xRealIp: req.headers['x-real-ip'], xVercelForwardedFor: req.headers['x-vercel-forwarded-for'] } });
+    res.status(200).json({ success: true, fb_response: fbJson });
   } catch (err) {
     console.error('Webhook error:', err);
     res.status(500).json({ error: 'Internal error' });
