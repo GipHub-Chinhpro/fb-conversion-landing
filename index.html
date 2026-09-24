@@ -210,72 +210,100 @@ const SIZES = [
   { value: 'Size 5 (15-18kg)', label: 'Size 5 — bé nặng 15-18kg' }
 ];
 
+function buildOneItemBlock(i) {
+  const block = document.createElement('div');
+  block.className = 'item-block';
+
+  const title = document.createElement('div');
+  title.className = 'item-block-title';
+  block.appendChild(title);
+
+  const sizeLabel = document.createElement('label');
+  sizeLabel.textContent = 'Size cho bé';
+  block.appendChild(sizeLabel);
+
+  const sizeSelect = document.createElement('select');
+  sizeSelect.className = 'item-size';
+  SIZES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.value;
+    opt.textContent = s.label;
+    sizeSelect.appendChild(opt);
+  });
+  block.appendChild(sizeSelect);
+
+  const mauLabel = document.createElement('label');
+  mauLabel.textContent = 'Chọn mẫu (bấm vào ảnh)';
+  block.appendChild(mauLabel);
+
+  const grid = document.createElement('div');
+  grid.className = 'mau-grid';
+  ALL_MAU.forEach((mau) => {
+    const card = document.createElement('label');
+    card.className = 'mau-card';
+
+    const img = document.createElement('img');
+    img.src = mau.img;
+    img.alt = mau.name;
+    card.appendChild(img);
+
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'mau-item-' + i;
+    input.dataset.color = mau.name;
+    input.addEventListener('change', function () {
+      grid.querySelectorAll('.mau-card').forEach(c => c.classList.remove('checked'));
+      card.classList.add('checked');
+      updateMatrixHint();
+    });
+    input.addEventListener('click', function (evt) { evt.stopPropagation(); });
+    card.appendChild(input);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'mau-name';
+    nameEl.textContent = mau.name;
+    card.appendChild(nameEl);
+
+    grid.appendChild(card);
+  });
+  block.appendChild(grid);
+
+  return block;
+}
+
+// Cập nhật danh sách khối "Chọn size & mẫu" theo đúng Số lượng mới — GIỮ NGUYÊN
+// các khối đã có (không xoá lựa chọn cũ của khách), chỉ thêm/bớt khối cho khớp
+// số lượng, và chỉ thêm/bớt Ở CUỐI để không xáo trộn các khối đang giữ dữ liệu.
+// (Sửa 2026-09-24: trước đây xoá trắng toàn bộ mỗi lần đổi Số lượng — nghi là rào
+// cản khiến khách ngại nâng lên combo vì phải chọn lại từ đầu.)
 function buildItemBlocks() {
   const qty = Number(document.getElementById('quantity').value) || 1;
   const container = document.getElementById('itemsContainer');
-  container.innerHTML = '';
+  let blocks = Array.from(container.querySelectorAll('.item-block'));
 
-  for (let i = 0; i < qty; i++) {
-    const block = document.createElement('div');
-    block.className = 'item-block';
-
-    const title = document.createElement('div');
-    title.className = 'item-block-title';
-    title.textContent = qty > 1 ? ('Áo ' + (i + 1) + ' / ' + qty) : 'Chọn size & mẫu cho áo';
-    block.appendChild(title);
-
-    const sizeLabel = document.createElement('label');
-    sizeLabel.textContent = 'Size cho bé';
-    block.appendChild(sizeLabel);
-
-    const sizeSelect = document.createElement('select');
-    sizeSelect.className = 'item-size';
-    SIZES.forEach(s => {
-      const opt = document.createElement('option');
-      opt.value = s.value;
-      opt.textContent = s.label;
-      sizeSelect.appendChild(opt);
-    });
-    block.appendChild(sizeSelect);
-
-    const mauLabel = document.createElement('label');
-    mauLabel.textContent = 'Chọn mẫu (bấm vào ảnh)';
-    block.appendChild(mauLabel);
-
-    const grid = document.createElement('div');
-    grid.className = 'mau-grid';
-    ALL_MAU.forEach((mau, mIdx) => {
-      const card = document.createElement('label');
-      card.className = 'mau-card';
-
-      const img = document.createElement('img');
-      img.src = mau.img;
-      img.alt = mau.name;
-      card.appendChild(img);
-
-      const input = document.createElement('input');
-      input.type = 'radio';
-      input.name = 'mau-item-' + i;
-      input.dataset.color = mau.name;
-      input.addEventListener('change', function () {
-        grid.querySelectorAll('.mau-card').forEach(c => c.classList.remove('checked'));
-        card.classList.add('checked');
-        updateMatrixHint();
-      });
-      input.addEventListener('click', function (evt) { evt.stopPropagation(); });
-      card.appendChild(input);
-
-      const nameEl = document.createElement('div');
-      nameEl.className = 'mau-name';
-      nameEl.textContent = mau.name;
-      card.appendChild(nameEl);
-
-      grid.appendChild(card);
-    });
-    block.appendChild(grid);
-
-    container.appendChild(block);
+  if (blocks.length > qty) {
+    for (let i = blocks.length - 1; i >= qty; i--) {
+      blocks[i].remove();
+    }
+  } else if (blocks.length < qty) {
+    for (let i = blocks.length; i < qty; i++) {
+      container.appendChild(buildOneItemBlock(i));
+    }
   }
+
+  blocks = Array.from(container.querySelectorAll('.item-block'));
+  blocks.forEach((block, i) => {
+    block.querySelector('.item-block-title').textContent =
+      qty > 1 ? ('Áo ' + (i + 1) + ' / ' + qty) : 'Chọn size & mẫu cho áo';
+  });
+}
+
+// Xoá trắng hoàn toàn rồi dựng lại từ đầu — CHỈ dùng sau khi đặt hàng thành công
+// (để chuẩn bị form sạch cho đơn tiếp theo), khác với buildItemBlocks() ở trên
+// vốn cố tình giữ lại lựa chọn khi khách chỉ đổi Số lượng.
+function resetItemBlocks() {
+  document.getElementById('itemsContainer').innerHTML = '';
+  buildItemBlocks();
 }
 
 // Trả về null nếu còn áo nào chưa chọn mẫu. Gộp các áo trùng size+mẫu lại
@@ -320,6 +348,12 @@ function updateMatrixHint() {
 }
 
 document.getElementById('quantity').addEventListener('change', function () {
+  const qty = Number(this.value) || 1;
+  // Ghi nhận riêng lúc khách thử chọn combo (2-3 áo) — không ảnh hưởng CAPI/đơn hàng,
+  // chỉ để soi funnel: bao nhiêu người thử combo nhưng cuối cùng không đặt hàng.
+  if (qty > 1 && window.fbq) {
+    fbq('trackCustom', 'ChonCombo', { so_luong: qty });
+  }
   updatePriceBox();
   buildItemBlocks();
   updateMatrixHint();
@@ -395,7 +429,7 @@ document.getElementById('leadForm').addEventListener('submit', async function (e
     statusEl.style.color = '#2d7d46';
     statusEl.textContent = 'Cảm ơn quý khách rất nhiều. Hotline: 0912628007';
     document.getElementById('leadForm').reset();
-    buildItemBlocks();
+    resetItemBlocks();
     updatePriceBox();
     updateMatrixHint();
     btn.disabled = false;
