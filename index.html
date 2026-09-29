@@ -119,9 +119,9 @@ fbq('track', 'PageView');
   <h1>Áo chống nắng chống tia UV cho bé - Bon Bon Shop</h1>
   <div class="price">Chỉ từ 79.000đ/áo</div>
   <div class="price-sub">
-    Mua lẻ 1 áo: 99.000đ (đã gồm 20k ship) &nbsp;|&nbsp;
-    Combo 2 áo: 158.000đ (miễn ship) &nbsp;|&nbsp;
-    Combo 3 áo: 225.000đ (miễn ship)
+    Mua lẻ 1 áo: 119.000đ (99k + 20k ship) &nbsp;|&nbsp;
+    Combo 2 áo: 178.000đ (89k/áo, miễn ship) &nbsp;|&nbsp;
+    Combo 3 áo: 237.000đ (79k/áo, miễn ship)
   </div>
   <div class="sold-badge">🔥 Đã bán 6.898+ đơn hàng — Ba mẹ khắp nơi tin dùng</div>
 
@@ -143,9 +143,9 @@ fbq('track', 'PageView');
 
       <label for="quantity">Số lượng (Tổng số mua)</label>
       <select id="quantity" name="quantity">
-        <option value="1">Mua lẻ 1 áo — 99.000đ (đã gồm ship)</option>
-        <option value="2">Combo 2 áo — 158.000đ (miễn ship)</option>
-        <option value="3">Combo 3 áo — 225.000đ (miễn ship)</option>
+        <option value="1">Mua lẻ 1 áo — 119.000đ (99k + 20k ship)</option>
+        <option value="2">Combo 2 áo — 178.000đ (89k/áo, miễn ship)</option>
+        <option value="3">Combo 3 áo — 237.000đ (79k/áo, miễn ship)</option>
       </select>
 
       <div id="itemsContainer"></div>
@@ -154,7 +154,7 @@ fbq('track', 'PageView');
       <label for="note">Ghi chú thêm (không bắt buộc)</label>
       <textarea id="note" name="note" placeholder="VD: giao giờ hành chính, hẹn giờ giao, 2 bé khác size..."></textarea>
 
-      <div class="price-box" id="priceBox">Tổng Tiền Thanh Toán: 99.000đ</div>
+      <div class="price-box" id="priceBox">Tổng Tiền Thanh Toán: 119.000đ</div>
 
       <div class="commit-box">
         <div>✅ <span>Được kiểm tra hàng trước khi thanh toán (COD).</span></div>
@@ -179,7 +179,7 @@ function generateEventId() {
   return 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2);
 }
 
-const PRICE_BY_QTY = { '1': 99000, '2': 158000, '3': 225000 };
+const PRICE_BY_QTY = { '1': 119000, '2': 178000, '3': 237000 };
 
 function getSelectedPrice() {
   const qty = document.getElementById('quantity').value;
