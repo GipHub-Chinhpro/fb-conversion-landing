@@ -45,9 +45,10 @@ async function fetchWithTimeout(url, options, timeoutMs) {
   }
 }
 
-// Bảng giá CHÍNH THỨC cho Áo chống nắng (nhóm AAA), cập nhật 2026-09-06.
+// Bảng giá CHÍNH THỨC cho Áo chống nắng (nhóm AAA), cập nhật 2026-09-29:
+// 1 áo 99k + 20k ship = 119k | Combo 2 áo 178k (89k/áo, miễn ship) | Combo 3 áo 237k (79k/áo, miễn ship).
 // Tính giá ở SERVER (không tin giá gửi từ client) để tránh bị sửa giá qua DevTools.
-const PRICE_BY_QTY = { 1: 99000, 2: 158000, 3: 225000 };
+const PRICE_BY_QTY = { 1: 119000, 2: 178000, 3: 237000 };
 function getPriceForQuantity(quantity) {
   const qty = Number(quantity) || 1;
   return PRICE_BY_QTY[qty] || PRICE_BY_QTY[1];
